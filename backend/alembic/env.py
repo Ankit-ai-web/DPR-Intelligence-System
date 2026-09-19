@@ -9,6 +9,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from dotenv import load_dotenv
+from app.models.document import Document
 
 
 # Add backend directory to Python path

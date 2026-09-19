@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api.routes.users import router as users_router
 from app.api.routes.projects import router as projects_router
+from app.api.routes.documents import router as documents_router
 
 
 app = FastAPI(
@@ -9,6 +10,7 @@ app = FastAPI(
     description="AI-powered DPR analysis and clearance platform",
     version="1.0.0",
 )
+app.include_router(documents_router)
 
 
 app.include_router(users_router)
