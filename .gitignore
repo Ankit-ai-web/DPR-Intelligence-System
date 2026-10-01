@@ -1,12 +1,5 @@
-# Virtual environment
 venv/
-
-# Python cache
+.env
 __pycache__/
 *.pyc
-
-# Environment variables / secrets
-.env
-
-# VS Code settings
-.vscode/
+backend/uploads/
