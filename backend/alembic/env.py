@@ -1,34 +1,26 @@
 from logging.config import fileConfig
-
 import os
-import sys
-from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, pool
 
 from alembic import context
-from dotenv import load_dotenv
+
+from app.models.base import Base
+
+# Import all models so Alembic can detect them
+from app.models.user import User
+from app.models.dpr_project import DPRProject
 from app.models.document import Document
-
-
-# Add backend directory to Python path
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-
-
-# Alembic Config object
-config = context.config
+from app.models.analysis import DocumentAnalysis
 
 
 # Load environment variables from .env
 load_dotenv()
 
-database_url = os.getenv("DATABASE_URL")
 
-if not database_url:
-    raise ValueError("DATABASE_URL is not set")
-
-config.set_main_option("sqlalchemy.url", database_url)
+# Alembic Config object
+config = context.config
 
 
 # Configure Python logging
@@ -36,26 +28,32 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 
-# Import Base and all models
-from app.models.base import Base
-from app.models.user import User
-from app.models.dpr_project import DPRProject
-
-
-# SQLAlchemy metadata for Alembic autogenerate
+# SQLAlchemy metadata for autogenerate
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
     """Run migrations in offline mode."""
 
-    url = config.get_main_option("sqlalchemy.url")
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise ValueError("DATABASE_URL is not set")
+
+    # Use pg8000 instead of psycopg
+    database_url = database_url.replace(
+        "postgresql+psycopg://",
+        "postgresql+pg8000://"
+    )
 
     context.configure(
-        url=url,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={
+            "paramstyle": "named"
+        },
+        compare_type=True,
     )
 
     with context.begin_transaction():
@@ -65,9 +63,19 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in online mode."""
 
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        raise ValueError("DATABASE_URL is not set")
+
+    # Use pg8000 instead of psycopg
+    database_url = database_url.replace(
+        "postgresql+psycopg://",
+        "postgresql+pg8000://"
+    )
+
+    connectable = create_engine(
+        database_url,
         poolclass=pool.NullPool,
     )
 
@@ -75,6 +83,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            compare_type=True,
         )
 
         with context.begin_transaction():
