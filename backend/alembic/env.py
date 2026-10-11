@@ -70,8 +70,13 @@ def run_migrations_online() -> None:
 
     # Use pg8000 instead of psycopg
     database_url = database_url.replace(
+        "postgresql://",
+        "postgresql+pg8000://",
+        1,
+    ).replace(
         "postgresql+psycopg://",
-        "postgresql+pg8000://"
+        "postgresql+pg8000://",
+        1,
     )
 
     connectable = create_engine(

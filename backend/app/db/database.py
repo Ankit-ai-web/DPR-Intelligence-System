@@ -11,12 +11,17 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set")
 
-engine = create_engine(
-    DATABASE_URL.replace(
-        "postgresql+psycopg://",
-        "postgresql+pg8000://"
-    )
+database_url = DATABASE_URL.replace(
+    "postgresql://",
+    "postgresql+pg8000://",
+    1
+).replace(
+    "postgresql+psycopg://",
+    "postgresql+pg8000://",
+    1
 )
+
+engine = create_engine(database_url)
 
 SessionLocal = sessionmaker(
     bind=engine,
