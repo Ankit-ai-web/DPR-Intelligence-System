@@ -1,8 +1,9 @@
+import json
 from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from sqlalchemy import select
+from sqlalchemy import select,delete
 from sqlalchemy.orm import Session
 import fitz
 
@@ -212,9 +213,22 @@ def analyze_document(
             detail="Document has no extracted text"
         )
 
-    # Generate AI analysis
+    # =========================
+    # GENERATE AI ANALYSIS
+    # =========================
+
     try:
         analysis = analyze_dpr(document.text)
+
+        parsed_analysis = json.loads(analysis)
+
+    except json.JSONDecodeError as e:
+        print("AI JSON ERROR:", repr(e))
+
+        raise HTTPException(
+            status_code=500,
+            detail="AI returned invalid analysis data"
+        )
 
     except Exception as e:
         print("AI ANALYSIS ERROR:", repr(e))
@@ -224,11 +238,42 @@ def analyze_document(
             detail="Failed to analyze document with AI"
         )
 
-    # Save analysis to database
+    # =========================
+    # EXTRACT INTELLIGENCE SCORES
+    # =========================
+
+    health_score = parsed_analysis.get(
+        "health_score",
+        0
+    )
+
+    risk_score = parsed_analysis.get(
+        "risk_score",
+        0
+    )
+
+    data_completeness = parsed_analysis.get(
+        "data_completeness",
+        0
+    )
+
+    risk_level = parsed_analysis.get(
+        "risk_level",
+        "Unknown"
+    )
+
+    # =========================
+    # SAVE ANALYSIS
+    # =========================
+
     try:
         document_analysis = DocumentAnalysis(
             document_id=document.id,
-            analysis=analysis
+            analysis=analysis,
+            health_score=health_score,
+            risk_score=risk_score,
+            data_completeness=data_completeness,
+            risk_level=risk_level
         )
 
         db.add(document_analysis)
@@ -245,12 +290,24 @@ def analyze_document(
             detail="AI analysis generated but failed to save it"
         )
 
+    # =========================
+    # RESPONSE
+    # =========================
+
     return {
         "document_id": document.id,
         "analysis_id": document_analysis.id,
         "filename": document.filename,
         "status": "analyzed",
-        "analysis": document_analysis.analysis,
+
+        "scores": {
+            "health_score": document_analysis.health_score,
+            "risk_score": document_analysis.risk_score,
+            "data_completeness": document_analysis.data_completeness,
+            "risk_level": document_analysis.risk_level
+        },
+
+        "analysis": parsed_analysis,
         "created_at": document_analysis.created_at
     }
 
@@ -264,7 +321,10 @@ def get_document_analysis(
     document_id: int,
     db: Session = Depends(get_db)
 ):
-    # Check document exists
+    # =========================
+    # CHECK DOCUMENT EXISTS
+    # =========================
+
     document = db.get(Document, document_id)
 
     if not document:
@@ -273,7 +333,10 @@ def get_document_analysis(
             detail="Document not found"
         )
 
-    # Get latest analysis
+    # =========================
+    # GET LATEST ANALYSIS
+    # =========================
+
     analysis = db.scalars(
         select(DocumentAnalysis)
         .where(
@@ -290,10 +353,68 @@ def get_document_analysis(
             detail="No analysis found for this document"
         )
 
+    # =========================
+    # RESPONSE
+    # =========================
+
     return {
         "document_id": document.id,
         "filename": document.filename,
         "analysis_id": analysis.id,
-        "analysis": analysis.analysis,
+
+        "scores": {
+            "health_score": analysis.health_score,
+            "risk_score": analysis.risk_score,
+            "data_completeness": analysis.data_completeness,
+            "risk_level": analysis.risk_level
+        },
+
+        "analysis": json.loads(analysis.analysis),
         "created_at": analysis.created_at
+    }
+
+@router.delete("/{document_id}")
+def delete_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+):
+    document = db.get(Document, document_id)
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found",
+        )
+
+    saved_file_path = Path(document.file_path)
+
+    try:
+        db.execute(
+            delete(DocumentAnalysis).where(
+                DocumentAnalysis.document_id == document_id
+            )
+        )
+        db.delete(document)
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        print("DOCUMENT DELETE ERROR:", repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to delete document from database",
+        )
+
+    try:
+        upload_root = UPLOAD_DIR.resolve()
+        resolved_path = saved_file_path.resolve()
+
+        if resolved_path.parent == upload_root:
+            resolved_path.unlink(missing_ok=True)
+    except OSError as e:
+        print("PDF CLEANUP ERROR:", repr(e))
+
+    return {
+        "message": "Document deleted successfully",
+        "document_id": document_id,
     }

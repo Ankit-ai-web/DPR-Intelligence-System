@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Text, DateTime, ForeignKey
+from sqlalchemy import Text, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -18,6 +18,26 @@ class DocumentAnalysis(Base):
 
     analysis: Mapped[str] = mapped_column(
         Text,
+        nullable=False
+    )
+
+    health_score: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    risk_score: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    data_completeness: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    risk_level: Mapped[str] = mapped_column(
+        String(20),
         nullable=False
     )
 
