@@ -7,12 +7,14 @@ BACKEND_DIR = str(Path(__file__).resolve().parents[1])
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.routes.users import router as users_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.documents import router as documents_router
+from app.db.database import engine
 
 
 app = FastAPI(
@@ -55,23 +57,34 @@ app.include_router(users_router)
 app.include_router(projects_router)
 
 
-# =========================
-# ROOT
-# =========================
-
 @app.get("/")
 def root():
-    return {
-        "message": "DPR Intelligence System API is running"
-    }
+    return {"message": "DPR Intelligence System API is running"}
 
-
-# =========================
-# HEALTH CHECK
-# =========================
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "healthy"
-    }
+    # Liveness only: confirms that the FastAPI application started.
+    return {"status": "healthy", "service": "DPR Intelligence System API"}
+
+
+@app.get("/health/ready")
+def readiness_check():
+    # Readiness verifies the database connection required by application routes.
+    if engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="DATABASE_URL is not configured in the backend deployment environment.",
+        )
+
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except Exception:
+        # Avoid returning connection strings or other sensitive database details.
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection failed. Verify DATABASE_URL and the database provider's network/SSL settings.",
+        )
+
+    return {"status": "ready", "database": "connected"}
