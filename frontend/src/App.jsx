@@ -3,6 +3,12 @@ import "./App.css";
 
 const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
 const API_URL_ERROR = "Backend URL is not configured. Set VITE_API_URL in the Vercel frontend project to your deployed backend URL, then redeploy the frontend.";
+const getRequestError = (err, fallback) => {
+  if (err instanceof TypeError && /fetch/i.test(err.message)) {
+    return "Cannot reach the backend. Check that the backend deployment is live, VITE_API_URL is the correct backend URL, and FRONTEND_ORIGINS includes this frontend URL.";
+  }
+  return err.message || fallback;
+};
 
 function App() {
   const [file, setFile] = useState(null);
@@ -36,7 +42,7 @@ function App() {
 
       setDocuments(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Could not load previous DPRs.");
+      setError(getRequestError(err, "Could not load previous DPRs."));
     } finally {
       setLoadingDocuments(false);
     }
@@ -83,7 +89,7 @@ function App() {
       );
       await fetchDocuments();
     } catch (err) {
-      setError(err.message || "Upload failed.");
+      setError(getRequestError(err, "Upload failed."));
     } finally {
       setUploading(false);
     }
@@ -120,7 +126,7 @@ function App() {
       setNotice("DPR analysis completed and saved.");
       await fetchDocuments();
     } catch (err) {
-      setError(err.message || "Analysis failed.");
+      setError(getRequestError(err, "Analysis failed."));
     } finally {
       setAnalyzing(false);
     }
@@ -164,7 +170,7 @@ function App() {
 
       setNotice(`"${filename}" was deleted successfully.`);
     } catch (err) {
-      setError(err.message || "Could not delete DPR.");
+      setError(getRequestError(err, "Could not delete DPR."));
     } finally {
       setDeletingDocumentId(null);
     }
@@ -200,7 +206,7 @@ function App() {
       setAnalysis(data);
       setNotice(`Loaded saved analysis for ${data.filename}.`);
     } catch (err) {
-      setError(err.message || "Could not retrieve this DPR.");
+      setError(getRequestError(err, "Could not retrieve this DPR."));
     } finally {
       setAnalyzing(false);
     }
