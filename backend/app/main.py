@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 # Make the backend package importable when Vercel loads backend.app.main from repo root.
-BACKEND_DIR = str(Path(__file__).resolve().parents[2])
+BACKEND_DIR = str(Path(__file__).resolve().parents[1])
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
