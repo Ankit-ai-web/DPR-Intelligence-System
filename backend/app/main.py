@@ -15,6 +15,7 @@ from app.api.routes.users import router as users_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.documents import router as documents_router
 from app.db.database import engine
+from app.models.base import Base
 
 
 app = FastAPI(
@@ -22,6 +23,13 @@ app = FastAPI(
     description="AI-powered DPR analysis and clearance platform",
     version="1.0.0",
 )
+
+
+@app.on_event("startup")
+def create_missing_tables():
+    # Provision missing tables for a fresh Neon database. Existing tables/data are preserved.
+    if engine is not None:
+        Base.metadata.create_all(bind=engine)
 
 
 # =========================
