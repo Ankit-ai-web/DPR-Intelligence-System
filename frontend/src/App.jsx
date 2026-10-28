@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
+const API_URL_ERROR = "Backend URL is not configured. Set VITE_API_URL in the Vercel frontend project to your deployed backend URL, then redeploy the frontend.";
 
 function App() {
   const [file, setFile] = useState(null);
@@ -16,6 +17,13 @@ function App() {
   const [notice, setNotice] = useState("");
 
   const fetchDocuments = async () => {
+    if (!API_URL) {
+      setDocuments([]);
+      setError(API_URL_ERROR);
+      setLoadingDocuments(false);
+      return;
+    }
+
     setLoadingDocuments(true);
 
     try {
@@ -39,6 +47,11 @@ function App() {
   }, []);
 
   const uploadDocument = async () => {
+    if (!API_URL) {
+      setError(API_URL_ERROR);
+      return;
+    }
+
     if (!file) {
       setError("Please select a PDF first.");
       return;
@@ -77,6 +90,11 @@ function App() {
   };
 
   const analyzeDocument = async () => {
+    if (!API_URL) {
+      setError(API_URL_ERROR);
+      return;
+    }
+
     if (!documentId) {
       setError("Select or upload a document first.");
       return;
@@ -109,6 +127,11 @@ function App() {
   };
 
   const deleteDocument = async (id, filename) => {
+    if (!API_URL) {
+      setError(API_URL_ERROR);
+      return;
+    }
+
     const confirmed = window.confirm(
       `Are you sure you want to permanently delete "${filename}" and its saved analysis? This cannot be undone.`
     );
@@ -148,6 +171,11 @@ function App() {
   };
 
   const viewPreviousDPR = async (id) => {
+    if (!API_URL) {
+      setError(API_URL_ERROR);
+      return;
+    }
+
     setError("");
     setNotice("");
     setAnalyzing(true);
