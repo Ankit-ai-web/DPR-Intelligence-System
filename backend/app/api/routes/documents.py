@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from pathlib import Path
 from uuid import uuid4
 
@@ -25,7 +27,7 @@ router = APIRouter(
 # UPLOAD DIRECTORY
 # =========================
 
-UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(Path(tempfile.gettempdir()) / "dpr-intelligence-uploads"))).expanduser()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
