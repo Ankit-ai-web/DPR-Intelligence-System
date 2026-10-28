@@ -10,13 +10,11 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY is not set")
-
-client = genai.Client(api_key=GEMINI_API_KEY)
-
-
 def analyze_dpr(text: str) -> str:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured in the backend environment")
+    client = genai.Client(api_key=api_key)
     prompt = f"""
 You are an expert DPR (Detailed Project Report) intelligence analyst.
 
