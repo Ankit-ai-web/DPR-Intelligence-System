@@ -1,3 +1,12 @@
+import os
+import sys
+from pathlib import Path
+
+# Make the backend package importable when Vercel loads backend.app.main from repo root.
+BACKEND_DIR = str(Path(__file__).resolve().parents[2])
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,12 +26,20 @@ app = FastAPI(
 # CORS CONFIGURATION
 # =========================
 
+configured_origins = os.getenv("FRONTEND_ORIGINS", "")
+allowed_origins = [
+    origin.strip().rstrip("/")
+    for origin in configured_origins.split(",")
+    if origin.strip()
+]
+allowed_origins.extend([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=list(dict.fromkeys(allowed_origins)),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
